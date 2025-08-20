@@ -133,7 +133,7 @@ const Profile: React.FC = () => {
               </div>
 
               <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1"><b>Discription</b></label>
                 {isEditing ? (
                   <textarea
                     value={profile.bio}
