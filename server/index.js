@@ -14,6 +14,7 @@ const roadmapRoutes = require('./routes/roadmaps');
 const jobRoutes = require('./routes/jobs');
 const skillRoutes = require('./routes/skills');
 const errorHandler = require('./middleware/errorHandler');
+const geminiService = require('./services/geminiService');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -62,6 +63,17 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/roadmaps', roadmapRoutes);
 app.use('/api/jobs', jobRoutes);
 app.use('/api/skills', skillRoutes);
+
+app.post('/api/ask', async (req, res) => {
+  const { prompt, context } = req.body;
+  try {
+    const result = await geminiService.generateResponse(prompt, context);
+    res.json({ reply: result.content });
+  } catch (error) {
+    console.error('Gemini error:', error); // Add this line
+    res.status(500).json({ reply: "Sorry, AI service is unavailable." });
+  }
+});
 
 // Error handling middleware
 app.use(errorHandler);

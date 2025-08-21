@@ -3,25 +3,29 @@ const axios = require('axios');
 class GeminiService {
   constructor() {
     this.apiKey = process.env.GEMINI_API_KEY;
-    this.baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+    this.apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-001:generateContent';
   }
 
+  /**
+   * Generates a Gemini AI response for a user's message and context.
+   * @param {string} userMessage - The user's input message.
+   * @param {object} context - Additional context (chatHistory, userProfile).
+   * @returns {Promise<object>} - AI response, metadata, and token estimates.
+   */
   async generateResponse(userMessage, context = {}) {
-    try {
-      if (!this.apiKey) {
-        // Fallback to mock response for development
-        return this.generateMockResponse(userMessage, context);
-      }
+    if (!this.apiKey) {
+      // Fallback to mock response for development
+      return this.generateMockResponse(userMessage, context);
+    }
 
-      const prompt = this.buildPrompt(userMessage, context);
-      
-      const response = await axios.post(
-        `${this.baseUrl}?key=${this.apiKey}`,
+    const prompt = this.buildPrompt(userMessage, context);
+
+    try {
+      const apiResponse = await axios.post(
+        `${this.apiUrl}?key=${this.apiKey}`,
         {
           contents: [{
-            parts: [{
-              text: prompt
-            }]
+            parts: [{ text: prompt }]
           }],
           generationConfig: {
             temperature: 0.7,
@@ -41,36 +45,36 @@ class GeminiService {
           ]
         },
         {
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           timeout: 30000
         }
       );
 
-      const aiContent = response.data.candidates[0].content.parts[0].text;
-      const metadata = this.extractMetadata(userMessage, aiContent);
+      const aiText = apiResponse.data.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I couldn't generate a response.";
+      const metadata = this.extractMetadata(userMessage, aiText);
 
       return {
-        content: aiContent,
+        content: aiText,
         metadata,
         tokens: {
           input: this.estimateTokens(prompt),
-          output: this.estimateTokens(aiContent)
+          output: this.estimateTokens(aiText)
         }
       };
     } catch (error) {
       console.error('Gemini API error:', error.response?.data || error.message);
-      
       // Fallback to mock response
       return this.generateMockResponse(userMessage, context);
     }
   }
 
+  /**
+   * Builds the prompt for Gemini API using user message and context.
+   */
   buildPrompt(userMessage, context) {
     const { chatHistory = [], userProfile = {} } = context;
-    
-    let prompt = `You are an AI Career Assistant helping users plan their career paths and develop skills. 
+
+    let prompt = `You are a Personalized AI Career Advisor for Indian students.
 
 User Profile:
 - Background: ${userProfile.background || 'Not specified'}
@@ -89,20 +93,50 @@ User Profile:
 
     prompt += `Current User Message: ${userMessage}
 
-Please provide helpful, personalized career guidance. If the user mentions specific skills, career goals, or learning interests, be sure to acknowledge them and provide relevant advice.
+Goal: Help users identify skill gaps, track learning progress, and recommend career paths with actionable steps.
 
-Focus on:
-1. Understanding their career aspirations
-2. Identifying skill gaps and learning opportunities
-3. Suggesting practical next steps
-4. Providing encouragement and motivation
-5. Recommending specific resources when appropriate
+Responsibilities:
+1. Analyze the user’s skills, education, and goals.
+2. Identify missing skills required for their desired career.
+3. Recommend a skill development roadmap with courses, tools, and practice projects.
+4. Suggest ways to track progress and milestones.
+5. Provide relevant career opportunities, certifications, and internships.
+
+Rules:
+- Only respond in the context of skill gaps, progress tracking, and career guidance.
+- Keep answers structured, concise, and actionable.
+- Ask clarifying questions if the input is incomplete.
+- Never output unrelated information.
+
+Example:
+Input: "I’m a final-year B.Tech IT student, skilled in HTML, CSS, and basic JavaScript, aiming for a full-stack developer role."
+Output:
+Career Path Recommendation: Full-Stack Web Developer
+Skill Gaps:
+1. Backend Development (Node.js/Express)
+2. Database Management (MongoDB, SQL)
+3. API Development & Integration
+4. Deployment (Docker, CI/CD)
+Action Plan:
+- Learn Node.js & Express from "The Odin Project"
+- Practice building REST APIs
+- Build a MERN stack project (e.g., Task Manager App)
+Progress Tracking:
+- Weekly coding hours log
+- GitHub commit activity
+- Monthly project reviews
+Opportunities:
+- Apply for internships at startups
+- Earn AWS Cloud Practitioner Certification
 
 Keep responses conversational, encouraging, and actionable.`;
 
     return prompt;
   }
 
+  /**
+   * Extracts metadata such as skills, goals, and sentiment from the conversation.
+   */
   extractMetadata(userMessage, aiResponse) {
     const metadata = {
       extractedSkills: [],
@@ -130,7 +164,7 @@ Keep responses conversational, encouraging, and actionable.`;
     const lowerMessage = userMessage.toLowerCase();
     const lowerResponse = aiResponse.toLowerCase();
 
-    // Extract skills mentioned in user message
+    // Extract skills mentioned in user message or AI response
     skillKeywords.forEach(skill => {
       if (lowerMessage.includes(skill) || lowerResponse.includes(skill)) {
         metadata.extractedSkills.push(skill);
@@ -160,6 +194,9 @@ Keep responses conversational, encouraging, and actionable.`;
     return metadata;
   }
 
+  /**
+   * Generates a mock response for development or fallback.
+   */
   generateMockResponse(userMessage, context) {
     const lowerMessage = userMessage.toLowerCase();
     let response = '';
@@ -274,10 +311,12 @@ What specific aspect of your career would you like to focus on? Whether you're j
     };
   }
 
+  /**
+   * Estimates token count (roughly 4 characters per token).
+   */
   estimateTokens(text) {
-    // Rough estimation: ~4 characters per token
     return Math.ceil(text.length / 4);
   }
 }
-
 module.exports = new GeminiService();
+
