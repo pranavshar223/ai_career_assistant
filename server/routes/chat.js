@@ -1,6 +1,7 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const ChatMessage = require('../models/ChatMessage');
+const UserSession = require('../models/UserSession');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
 const geminiService = require('../services/geminiService');
@@ -32,34 +33,64 @@ router.post('/message', auth, [
     const { content, sessionId = `session_${Date.now()}` } = req.body;
     const userId = req.user._id;
 
+    const startTime = Date.now();
+
+    // Get or create user session
+    let userSession = await UserSession.findOne({ sessionId, userId });
+    if (!userSession) {
+      userSession = new UserSession({
+        userId,
+        sessionId,
+        startTime: new Date(),
+        deviceInfo: {
+          userAgent: req.headers['user-agent'],
+          platform: req.headers['sec-ch-ua-platform'],
+          browser: req.headers['sec-ch-ua']
+        }
+      });
+      await userSession.save();
+    }
+
     // Save user message
     const userMessage = new ChatMessage({
       userId,
       sessionId,
       content,
-      role: 'user'
+      role: 'user',
+      processingTime: 0
     });
     await userMessage.save();
 
-    // Get chat history for context
-    const chatHistory = await ChatMessage.find({
+    // Get recent chat history for context (last 10 messages)
+    const recentChatHistory = await ChatMessage.find({
       userId,
       sessionId
-    }).sort({ createdAt: 1 }).limit(10);
+    }).sort({ createdAt: -1 }).limit(10).sort({ createdAt: 1 });
 
     // Get user profile for context
     const user = await User.findById(userId);
 
-    // Generate AI response
-    const aiResponse = await geminiService.generateResponse(content, {
-      chatHistory: chatHistory.slice(0, -1), // Exclude the current message
+    // Build enhanced context
+    const enhancedContext = {
+      chatHistory: recentChatHistory.slice(0, -1), // Exclude current message
       userProfile: {
         background: user.background,
         skills: user.skills,
         careerGoals: user.careerGoals,
-        preferences: user.preferences
+        preferences: user.preferences,
+        profile: user.profile
+      },
+      sessionContext: {
+        topics: userSession.topics || [],
+        intents: userSession.intents || [],
+        stage: recentChatHistory.length < 3 ? 'initial' : 'ongoing'
       }
-    });
+    };
+
+    // Generate AI response
+    const aiResponse = await geminiService.generateResponse(content, enhancedContext);
+
+    const processingTime = Date.now() - startTime;
 
     // Save AI response
     const assistantMessage = new ChatMessage({
@@ -68,9 +99,68 @@ router.post('/message', auth, [
       content: aiResponse.content,
       role: 'assistant',
       metadata: aiResponse.metadata,
-      tokens: aiResponse.tokens
+      tokens: aiResponse.tokens,
+      processingTime,
+      source: aiResponse.source
     });
     await assistantMessage.save();
+
+    // Update user session with new data
+    userSession.messageCount += 2; // User + AI message
+    userSession.endTime = new Date();
+    
+    // Update session topics and intents
+    if (aiResponse.metadata.topics) {
+      userSession.topics = [...new Set([...userSession.topics, ...aiResponse.metadata.topics])];
+    }
+    if (aiResponse.metadata.intent) {
+      userSession.intents = [...new Set([...userSession.intents, aiResponse.metadata.intent])];
+    }
+    
+    await userSession.save();
+
+    // Update user analytics
+    await User.findByIdAndUpdate(userId, {
+      $inc: {
+        'analytics.totalChatMessages': 2,
+        'aiInteractions.totalQueries': 1
+      },
+      $set: {
+        'analytics.lastActiveDate': new Date()
+      },
+      $addToSet: {
+        'aiInteractions.favoriteTopics': { $each: aiResponse.metadata.topics || [] }
+      }
+    });
+
+    // Update user intent tracking
+    if (aiResponse.metadata.intent) {
+      await User.findOneAndUpdate(
+        { 
+          _id: userId, 
+          'aiInteractions.commonIntents.intent': aiResponse.metadata.intent 
+        },
+        { 
+          $inc: { 'aiInteractions.commonIntents.$.count': 1 } 
+        }
+      );
+      
+      // If intent doesn't exist, add it
+      await User.findOneAndUpdate(
+        { 
+          _id: userId, 
+          'aiInteractions.commonIntents.intent': { $ne: aiResponse.metadata.intent }
+        },
+        { 
+          $push: { 
+            'aiInteractions.commonIntents': { 
+              intent: aiResponse.metadata.intent, 
+              count: 1 
+            } 
+          } 
+        }
+      );
+    }
 
     // Update user streak if this is a meaningful interaction
     if (content.length > 10) {
@@ -78,12 +168,12 @@ router.post('/message', auth, [
       await user.save();
     }
 
-    // Extract and update user skills/goals if AI detected any
-    if (aiResponse.metadata?.extractedSkills?.length > 0) {
+    // Process extracted skills and goals
+    if (aiResponse.metadata.extractedSkills?.length > 0) {
       await updateUserSkills(userId, aiResponse.metadata.extractedSkills);
     }
 
-    if (aiResponse.metadata?.extractedGoals?.length > 0) {
+    if (aiResponse.metadata.extractedGoals?.length > 0) {
       await updateUserGoals(userId, aiResponse.metadata.extractedGoals);
     }
 
@@ -94,9 +184,19 @@ router.post('/message', auth, [
         content: assistantMessage.content,
         role: assistantMessage.role,
         timestamp: assistantMessage.createdAt,
-        sessionId
+        sessionId,
+        confidence: aiResponse.confidence,
+        processingTime,
+        source: aiResponse.source
       },
-      metadata: aiResponse.metadata
+      metadata: {
+        ...aiResponse.metadata,
+        sessionStats: {
+          messageCount: userSession.messageCount,
+          topics: userSession.topics,
+          duration: userSession.duration
+        }
+      }
     });
   } catch (error) {
     console.error('Chat message error:', error);
@@ -193,16 +293,20 @@ async function updateUserSkills(userId, extractedSkills) {
     const existingSkills = user.skills.map(s => s.name.toLowerCase());
     
     const newSkills = extractedSkills
-      .filter(skill => !existingSkills.includes(skill.toLowerCase()))
+      .filter(skillData => {
+        const skillName = typeof skillData === 'string' ? skillData : skillData.name;
+        return !existingSkills.includes(skillName.toLowerCase());
+      })
       .map(skill => ({
-        name: skill,
+        name: typeof skill === 'string' ? skill : skill.name,
         level: 'beginner',
-        category: 'general',
+        category: typeof skill === 'string' ? 'general' : skill.category,
         addedAt: new Date()
       }));
 
     if (newSkills.length > 0) {
       user.skills.push(...newSkills);
+      user.analytics.totalSkillsLearned += newSkills.length;
       await user.save();
     }
   } catch (error) {
@@ -220,7 +324,7 @@ async function updateUserGoals(userId, extractedGoals) {
       .filter(goal => !existingGoals.includes(goal.toLowerCase()))
       .map(goal => ({
         title: goal,
-        description: `Goal identified from chat conversation`,
+        description: `Goal identified from AI conversation`,
         priority: 'medium',
         completed: false
       }));

@@ -93,13 +93,110 @@ const userSchema = new mongoose.Schema({
       default: 0
     },
     lastActivity: Date,
-    completedDays: [Date]
+    completedDays: [Date],
+    weeklyGoal: {
+      type: Number,
+      default: 5
+    },
+    monthlyGoal: {
+      type: Number,
+      default: 20
+    }
+  },
+  analytics: {
+    totalChatMessages: {
+      type: Number,
+      default: 0
+    },
+    totalSkillsLearned: {
+      type: Number,
+      default: 0
+    },
+    totalRoadmapsCompleted: {
+      type: Number,
+      default: 0
+    },
+    averageSessionDuration: {
+      type: Number,
+      default: 0
+    },
+    lastActiveDate: Date,
+    engagementScore: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 100
+    }
+  },
+  aiInteractions: {
+    totalQueries: {
+      type: Number,
+      default: 0
+    },
+    favoriteTopics: [String],
+    commonIntents: [{
+      intent: String,
+      count: Number
+    }],
+    satisfactionRatings: [{
+      rating: {
+        type: Number,
+        min: 1,
+        max: 5
+      },
+      feedback: String,
+      date: {
+        type: Date,
+        default: Date.now
+      }
+    }]
+  },
+  savedJobs: [{
+    jobId: String,
+    source: String,
+    savedAt: {
+      type: Date,
+      default: Date.now
+    },
+    notes: String,
+    status: {
+      type: String,
+      enum: ['saved', 'applied', 'interviewing', 'rejected', 'offered'],
+      default: 'saved'
+    }
+  }],
+  notifications: {
+    email: {
+      type: Boolean,
+      default: true
+    },
+    push: {
+      type: Boolean,
+      default: true
+    },
+    weeklyDigest: {
+      type: Boolean,
+      default: true
+    },
+    jobAlerts: {
+      type: Boolean,
+      default: true
+    }
   },
   isActive: {
     type: Boolean,
     default: true
   },
-  lastLogin: Date
+  lastLogin: Date,
+  onboardingCompleted: {
+    type: Boolean,
+    default: false
+  },
+  subscriptionTier: {
+    type: String,
+    enum: ['free', 'premium', 'enterprise'],
+    default: 'free'
+  }
 }, {
   timestamps: true
 });
