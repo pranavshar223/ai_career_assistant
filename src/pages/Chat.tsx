@@ -1,26 +1,39 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import ChatInterface from "../components/Chat/ChatInterface";
 import { ChatMessage } from "../types";
+import { useAuth } from "../contexts/AuthContext";
 
 const Chat: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [sessionId] = useState(`session_${Date.now()}`);
+  const { token } = useAuth();
 
-  // Mock AI responses - replace with real Gemini API integration
-const generateAIResponse = async (userMessage: string): Promise<string> => {
-  try {
-    const response = await fetch('http://localhost:5000/api/ask', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: userMessage }),
-    });
-    const data = await response.json(); 
-    return data.reply || "Sorry, I couldn't get a response from the AI.";
-  } catch (error) {
-    console.error('Error calling Gemini API:', error);
-    return "Sorry, I couldn't connect to the AI service.";
-  }
-};
+  // Load chat history on component mount
+  useEffect(() => {
+    loadChatHistory();
+  }, []);
+
+  const loadChatHistory = async () => {
+    try {
+      const response = await axios.get(`/chat/history/${sessionId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.data.messages) {
+        const formattedMessages: ChatMessage[] = response.data.messages.map((msg: any) => ({
+          id: msg.id,
+          content: msg.content,
+          role: msg.role,
+          timestamp: new Date(msg.timestamp),
+        }));
+        setMessages(formattedMessages);
+      }
+    } catch (error) {
+      console.error('Error loading chat history:', error);
+    }
+  };
 
   const handleSendMessage = async (content: string) => {
     const userMessage: ChatMessage = {
@@ -34,20 +47,28 @@ const generateAIResponse = async (userMessage: string): Promise<string> => {
     setIsLoading(true);
 
     try {
-      const response = await generateAIResponse(content);
-      const aiMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        content: response,
-        role: "assistant",
-        timestamp: new Date(),
-      };
+      const response = await axios.post('/chat/message', {
+        content,
+        sessionId,
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
 
-      setMessages((prev) => [...prev, aiMessage]);
-    } catch (error) {
-      console.error("Error generating AI response:", error);
+      if (response.data.response) {
+        const aiMessage: ChatMessage = {
+          id: response.data.response.id,
+          content: response.data.response.content,
+          role: "assistant",
+          timestamp: new Date(response.data.response.timestamp),
+        };
+
+        setMessages((prev) => [...prev, aiMessage]);
+      }
+    } catch (error: any) {
+      console.error("Error sending message:", error);
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
-        content: "I'm sorry, I encountered an error. Please try again.",
+        content: error.response?.data?.message || "I'm sorry, I encountered an error. Please try again.",
         role: "assistant",
         timestamp: new Date(),
       };

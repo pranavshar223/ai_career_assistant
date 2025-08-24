@@ -1,96 +1,143 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { TrendingUp, Target, BookOpen, Users } from 'lucide-react';
 import SkillGapChart from '../components/Dashboard/SkillGapChart';
 import StreakTracker from '../components/Dashboard/StreakTracker';
 import RoadmapTimeline from '../components/Dashboard/RoadmapTimeline';
 import { SkillGap, RoadmapItem } from '../types';
-import { subDays } from 'date-fns';
+import { useAuth } from '../contexts/AuthContext';
 
 const Dashboard: React.FC = () => {
-  // Mock data - replace with real API calls
-  const [skillGaps] = useState<SkillGap[]>([
-    { skill: 'Python', current: 75, required: 90, gap: 15 },
-    { skill: 'Machine Learning', current: 40, required: 85, gap: 45 },
-    { skill: 'SQL', current: 80, required: 85, gap: 5 },
-    { skill: 'Statistics', current: 50, required: 80, gap: 30 },
-    { skill: 'Data Visualization', current: 65, required: 75, gap: 10 },
-  ]);
+  const { token, user } = useAuth();
+  const [skillGaps, setSkillGaps] = useState<SkillGap[]>([]);
+  const [roadmapItems, setRoadmapItems] = useState<RoadmapItem[]>([]);
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [analytics, setAnalytics] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const [roadmapItems, setRoadmapItems] = useState<RoadmapItem[]>([
-    {
-      id: '1',
-      title: 'Complete Python for Data Science Course',
-      description: 'Master advanced Python concepts including pandas, numpy, and scikit-learn',
-      type: 'skill',
-      duration: '4 weeks',
-      completed: true,
-      priority: 'high',
-    },
-    {
-      id: '2',
-      title: 'Build a Machine Learning Portfolio Project',
-      description: 'Create an end-to-end ML project with data preprocessing, model training, and deployment',
-      type: 'project',
-      duration: '6 weeks',
-      completed: false,
-      priority: 'high',
-    },
-    {
-      id: '3',
-      title: 'Get AWS Machine Learning Specialty Certification',
-      description: 'Earn industry-recognized certification in cloud-based ML services',
-      type: 'certification',
-      duration: '8 weeks',
-      completed: false,
-      priority: 'medium',
-    },
-  ]);
+  useEffect(() => {
+    loadDashboardData();
+  }, [token]);
+
+  const loadDashboardData = async () => {
+    if (!token) return;
+    
+    setIsLoading(true);
+    try {
+      // Load user profile
+      const profileResponse = await axios.get('/users/profile', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setUserProfile(profileResponse.data.profile);
+
+      // Load analytics
+      const analyticsResponse = await axios.get('/analytics/dashboard', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setAnalytics(analyticsResponse.data.analytics);
+
+      // Load roadmaps
+      const roadmapsResponse = await axios.get('/roadmaps', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (roadmapsResponse.data.roadmaps.length > 0) {
+        const latestRoadmap = roadmapsResponse.data.roadmaps[0];
+        setRoadmapItems(latestRoadmap.items || []);
+      }
+
+      // Generate skill gaps from user skills
+      if (profileResponse.data.profile.skills) {
+        const gaps = profileResponse.data.profile.skills.map((skill: any) => {
+          const currentLevel = skill.level === 'beginner' ? 30 : skill.level === 'intermediate' ? 60 : 90;
+          const requiredLevel = 85; // Target level
+          return {
+            skill: skill.name,
+            current: currentLevel,
+            required: requiredLevel,
+            gap: Math.max(0, requiredLevel - currentLevel)
+          };
+        });
+        setSkillGaps(gaps);
+      }
+
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+      // Fallback to empty data
+      setSkillGaps([]);
+      setRoadmapItems([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleToggleRoadmapItem = async (id: string) => {
+    try {
+      // Find the roadmap that contains this item
+      const roadmapsResponse = await axios.get('/roadmaps', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (roadmapsResponse.data.roadmaps.length > 0) {
+        const roadmapId = roadmapsResponse.data.roadmaps[0].id;
+        
+        await axios.put(`/roadmaps/${roadmapId}/items/${id}/toggle`, {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        // Update local state
+        setRoadmapItems(items =>
+          items.map(item =>
+            item.id === id ? { ...item, completed: !item.completed } : item
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Error toggling roadmap item:', error);
+    }
+  };
 
   const stats = [
     {
       title: 'Skills Learned',
-      value: '12',
+      value: userProfile?.skills?.length?.toString() || '0',
       change: '+2 this week',
       icon: BookOpen,
       color: 'text-blue-600 bg-blue-100',
     },
     {
       title: 'Career Progress',
-      value: '68%',
+      value: analytics?.overview?.avgSkillProgress ? `${Math.round(analytics.overview.avgSkillProgress)}%` : '0%',
       change: '+5% this month',
       icon: TrendingUp,
       color: 'text-green-600 bg-green-100',
     },
     {
       title: 'Goals Achieved',
-      value: '4/7',
+      value: `${userProfile?.careerGoals?.filter((g: any) => g.completed)?.length || 0}/${userProfile?.careerGoals?.length || 0}`,
       change: '1 completed',
       icon: Target,
       color: 'text-purple-600 bg-purple-100',
     },
     {
-      title: 'Network Connections',
-      value: '23',
+      title: 'Chat Messages',
+      value: analytics?.overview?.totalChatMessages?.toString() || '0',
       change: '+3 this week',
       icon: Users,
       color: 'text-orange-600 bg-orange-100',
     },
   ];
 
-  const completedDays = [
-    subDays(new Date(), 1),
-    subDays(new Date(), 2),
-    subDays(new Date(), 4),
-    subDays(new Date(), 6),
-  ];
-
-  const handleToggleRoadmapItem = (id: string) => {
-    setRoadmapItems(items =>
-      items.map(item =>
-        item.id === id ? { ...item, completed: !item.completed } : item
-      )
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading your dashboard...</p>
+        </div>
+      </div>
     );
-  };
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -123,19 +170,32 @@ const Dashboard: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column */}
           <div className="lg:col-span-2 space-y-8">
-            <SkillGapChart data={skillGaps} />
-            <RoadmapTimeline 
-              items={roadmapItems} 
-              onToggleComplete={handleToggleRoadmapItem} 
-            />
+            {skillGaps.length > 0 && <SkillGapChart data={skillGaps} />}
+            {roadmapItems.length > 0 && (
+              <RoadmapTimeline 
+                items={roadmapItems} 
+                onToggleComplete={handleToggleRoadmapItem} 
+              />
+            )}
+            {skillGaps.length === 0 && roadmapItems.length === 0 && (
+              <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200 text-center">
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Get Started</h3>
+                <p className="text-gray-600 mb-4">
+                  Start by chatting with our AI assistant to create your personalized career roadmap.
+                </p>
+                <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                  Start Chat
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Right Column */}
           <div className="space-y-8">
             <StreakTracker
-              currentStreak={7}
-              longestStreak={14}
-              completedDays={completedDays}
+              currentStreak={userProfile?.streak?.current || 0}
+              longestStreak={userProfile?.streak?.longest || 0}
+              completedDays={userProfile?.streak?.completedDays?.map((d: string) => new Date(d)) || []}
             />
             
             {/* Quick Actions */}

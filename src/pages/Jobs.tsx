@@ -1,87 +1,93 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { Search, MapPin, Filter, Briefcase } from 'lucide-react';
 import JobCard from '../components/Jobs/JobCard';
 import { Job } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 
 const Jobs: React.FC = () => {
+  const { token } = useAuth();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [location, setLocation] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
-  // Mock job data - replace with real API integration
-  const mockJobs: Job[] = [
-    {
-      id: '1',
-      title: 'Senior Data Scientist',
-      company: 'TechCorp Inc.',
-      location: 'San Francisco, CA',
-      salary: '$120,000 - $160,000',
-      description: 'We are seeking a Senior Data Scientist to join our AI/ML team. You will work on cutting-edge machine learning projects, develop predictive models, and drive data-driven decision making across the organization.',
-      url: '#',
-      posted: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-      matchScore: 92,
-    },
-    {
-      id: '2',
-      title: 'Machine Learning Engineer',
-      company: 'AI Innovations',
-      location: 'Remote',
-      salary: '$100,000 - $140,000',
-      description: 'Join our ML engineering team to build and deploy scalable machine learning systems. Experience with Python, TensorFlow, and cloud platforms required.',
-      url: '#',
-      posted: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-      matchScore: 88,
-    },
-    {
-      id: '3',
-      title: 'Data Analyst',
-      company: 'DataDriven Solutions',
-      location: 'New York, NY',
-      salary: '$70,000 - $90,000',
-      description: 'Looking for a detail-oriented Data Analyst to analyze business metrics, create reports, and provide insights to stakeholders. Strong SQL and Python skills preferred.',
-      url: '#',
-      posted: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-      matchScore: 75,
-    },
-    {
-      id: '4',
-      title: 'Junior Data Scientist',
-      company: 'StartupTech',
-      location: 'Austin, TX',
-      salary: '$80,000 - $100,000',
-      description: 'Perfect opportunity for a junior data scientist to grow their career. Work with modern data stack, build ML models, and learn from experienced mentors.',
-      url: '#',
-      posted: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
-      matchScore: 82,
-    },
-    {
-      id: '5',
-      title: 'Business Intelligence Developer',
-      company: 'Enterprise Corp',
-      location: 'Chicago, IL',
-      salary: '$90,000 - $120,000',
-      description: 'Develop and maintain BI solutions, create dashboards, and work with stakeholders to understand reporting requirements. Experience with Tableau or Power BI required.',
-      url: '#',
-      posted: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-      matchScore: 68,
-    },
-  ];
-
   useEffect(() => {
-    // Simulate API loading
-    const loadJobs = async () => {
-      setIsLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setJobs(mockJobs);
-      setIsLoading(false);
-    };
-
     loadJobs();
-  }, []);
+  }, [token]);
+
+  const loadJobs = async () => {
+    if (!token) return;
+    
+    setIsLoading(true);
+    try {
+      // Load job recommendations
+      const response = await axios.get('/jobs/recommendations', {
+        headers: { Authorization: `Bearer ${token}` },
+        params: { limit: 10 }
+      });
+      
+      if (response.data.recommendations) {
+        const formattedJobs: Job[] = response.data.recommendations.map((job: any) => ({
+          id: job.id,
+          title: job.title,
+          company: job.company,
+          location: job.location,
+          salary: job.salary,
+          description: job.description,
+          url: job.applyUrl || '#',
+          posted: new Date(job.postedDate || job.posted),
+          matchScore: job.matchScore || 75,
+        }));
+        setJobs(formattedJobs);
+      }
+    } catch (error) {
+      console.error('Error loading jobs:', error);
+      // Keep empty array if API fails
+      setJobs([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSearch = async () => {
+    if (!token) return;
+    
+    setIsLoading(true);
+    try {
+      const response = await axios.get('/jobs/search', {
+        headers: { Authorization: `Bearer ${token}` },
+        params: {
+          query: searchQuery,
+          location: location,
+          limit: 20
+        }
+      });
+      
+      if (response.data.jobs) {
+        const formattedJobs: Job[] = response.data.jobs.map((job: any) => ({
+          id: job.id,
+          title: job.title,
+          company: job.company,
+          location: job.location,
+          salary: job.salary,
+          description: job.description,
+          url: job.applyUrl || '#',
+          posted: new Date(job.postedDate || job.posted),
+          matchScore: job.matchScore || 75,
+        }));
+        setJobs(formattedJobs);
+      }
+    } catch (error) {
+      console.error('Error searching jobs:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filteredJobs = jobs.filter(job => {
-    const matchesSearch = job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    const matchesSearch = searchQuery === '' || 
+                         job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          job.company.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesLocation = location === '' || 
                            job.location.toLowerCase().includes(location.toLowerCase());
@@ -101,7 +107,7 @@ const Jobs: React.FC = () => {
 
         {/* Search Filters */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <input
@@ -124,7 +130,15 @@ const Jobs: React.FC = () => {
               />
             </div>
 
-            <button className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            <button 
+              onClick={handleSearch}
+              className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Search className="w-4 h-4 mr-2" />
+              Search
+            </button>
+
+            <button className="flex items-center justify-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
               <Filter className="w-4 h-4 mr-2" />
               More Filters
             </button>
@@ -172,9 +186,15 @@ const Jobs: React.FC = () => {
           <div className="text-center py-12">
             <Briefcase className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No jobs found</h3>
-            <p className="text-gray-600">
+            <p className="text-gray-600 mb-4">
               Try adjusting your search criteria or check back later for new opportunities.
             </p>
+            <button 
+              onClick={loadJobs}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Load Recommendations
+            </button>
           </div>
         )}
       </div>
