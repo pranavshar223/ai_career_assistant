@@ -116,7 +116,7 @@ const Profile: React.FC = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      loadProfile(); // Reload to get updated data
+      await loadProfile(); // Reload to get updated data
     } catch (error) {
       console.error('Error removing skill:', error);
     }
@@ -131,7 +131,7 @@ const Profile: React.FC = () => {
       });
       
       setNewGoal({ title: '', description: '', priority: 'medium' });
-      loadProfile(); // Reload to get updated data
+      await loadProfile(); // Reload to get updated data
     } catch (error) {
       console.error('Error adding goal:', error);
     }
@@ -143,7 +143,7 @@ const Profile: React.FC = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      loadProfile(); // Reload to get updated data
+      await loadProfile(); // Reload to get updated data
     } catch (error) {
       console.error('Error removing goal:', error);
     }
@@ -353,7 +353,7 @@ const Profile: React.FC = () => {
               <div className="flex flex-wrap gap-2">
                 {profile.skills.map((skill: any, index) => (
                   <div
-                    key={skill._id || index}
+                    key={skill._id || `skill-${index}`}
                     className="flex items-center px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium"
                   >
                     <span>{skill.name} ({skill.level})</span>
@@ -412,7 +412,7 @@ const Profile: React.FC = () => {
 
               <div className="space-y-2">
                 {profile.careerGoals.map((goal: any, index) => (
-                  <div key={goal._id || index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div key={goal._id || `goal-${index}`} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div className="flex items-center">
                       <Award className="w-4 h-4 text-yellow-500 mr-2" />
                       <div>

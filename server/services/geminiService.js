@@ -71,7 +71,7 @@ class GeminiService {
         const metadata = this.extractEnhancedMetadata(userMessage, aiText, context);
 
         return {
-          content: this.formatResponse(aiText),
+          content: this.formatResponse(aiText, context),
           metadata,
           tokens: {
             input: this.estimateTokens(prompt),
@@ -101,7 +101,7 @@ class GeminiService {
   buildEnhancedPrompt(userMessage, context) {
     const { chatHistory = [], userProfile = {}, sessionContext = {} } = context;
 
-    let prompt = `You are an Advanced AI Career Advisor specializing in personalized career guidance.
+    let prompt = `You are an Advanced AI Career Advisor specializing in personalized career guidance. You are friendly, encouraging, and provide actionable advice.
 
 CONTEXT ANALYSIS:
 User Profile:
@@ -110,6 +110,8 @@ User Profile:
 - Current Skills: ${this.formatSkills(userProfile.skills)}
 - Career Goals: ${this.formatGoals(userProfile.careerGoals)}
 - Location Preference: ${userProfile.preferences?.jobLocation || 'Not specified'}
+- Current Streak: ${userProfile.streak?.current || 0} days
+- Total Skills: ${userProfile.skills?.length || 0}
 - Job Type Preference: ${userProfile.preferences?.jobType || 'Not specified'}
 
 Session Context:
@@ -130,7 +132,7 @@ Session Context:
 
     prompt += `Current User Message: "${userMessage}"
 
-RESPONSE GUIDELINES:
+CRITICAL RESPONSE GUIDELINES:
 1. PERSONALIZATION: Tailor advice based on user's background, skills, and goals
 2. ACTIONABILITY: Provide specific, actionable steps and recommendations
 3. STRUCTURE: Use clear formatting with headers, bullet points, and sections
@@ -138,12 +140,24 @@ RESPONSE GUIDELINES:
 5. MOTIVATION: Be encouraging and supportive while being realistic
 6. FOLLOW-UP: Ask relevant questions to better understand user needs
 
+TONE AND STYLE:
+- Be conversational and friendly, not robotic
+- Use the user's name when appropriate
+- Reference their specific skills and goals
+- Provide encouraging and motivational responses
+- Use emojis sparingly but effectively
+
 RESPONSE CATEGORIES:
 - Skill Development: Learning paths, courses, certifications
 - Career Planning: Role transitions, industry insights, salary expectations
 - Job Search: Application strategies, interview prep, networking
 - Portfolio Building: Project ideas, showcase strategies
 - Industry Trends: Market analysis, emerging technologies
+
+SPECIAL HANDLING:
+- If asked about "today's goals" or daily goals, reference their current roadmap items and suggest specific daily actions
+- If asked about progress, reference their streak, completed skills, and roadmap progress
+- Always make responses feel personal and relevant to their journey
 
 FORMAT YOUR RESPONSE:
 - Use markdown formatting for better readability
@@ -246,6 +260,11 @@ Remember: Focus on practical, implementable advice that moves the user closer to
   detectIntent(message) {
     const lowerMessage = message.toLowerCase();
     
+    if (lowerMessage.includes('today') && (lowerMessage.includes('goal') || lowerMessage.includes('plan'))) return 'daily_goals';
+    if (lowerMessage.includes('daily') && (lowerMessage.includes('goal') || lowerMessage.includes('task'))) return 'daily_goals';
+    if (lowerMessage.includes('what should i do today')) return 'daily_goals';
+    if (lowerMessage.includes('today\'s') && lowerMessage.includes('goal')) return 'daily_goals';
+    
     if (lowerMessage.includes('roadmap') || lowerMessage.includes('learning path')) return 'roadmap_request';
     if (lowerMessage.includes('job') || lowerMessage.includes('career opportunity')) return 'job_search';
     if (lowerMessage.includes('skill') || lowerMessage.includes('learn')) return 'skill_development';
@@ -340,7 +359,7 @@ Remember: Focus on practical, implementable advice that moves the user closer to
   /**
    * Format response for better readability
    */
-  formatResponse(response) {
+  formatResponse(response, context = {}) {
     // Clean up the response and ensure proper formatting
     return response
       .replace(/\*\*(.*?)\*\*/g, '**$1**') // Ensure bold formatting
@@ -368,6 +387,7 @@ Remember: Focus on practical, implementable advice that moves the user closer to
   generateEnhancedMockResponse(userMessage, context) {
     const lowerMessage = userMessage.toLowerCase();
     const userProfile = context.userProfile || {};
+    const userName = userProfile.name || 'there';
     const intent = this.detectIntent(userMessage);
     
     let response = '';
@@ -375,6 +395,9 @@ Remember: Focus on practical, implementable advice that moves the user closer to
     switch (intent) {
       case 'roadmap_request':
         response = this.generateRoadmapResponse(userMessage, userProfile);
+        break;
+      case 'daily_goals':
+        response = this.generateDailyGoalsResponse(userMessage, userProfile);
         break;
       case 'job_search':
         response = this.generateJobSearchResponse(userMessage, userProfile);
@@ -409,11 +432,53 @@ Remember: Focus on practical, implementable advice that moves the user closer to
     };
   }
 
-  generateRoadmapResponse(userMessage, userProfile) {
-    const experience = userProfile.profile?.experience || 'beginner';
-    return `# 🗺️ Personalized Career Roadmap
+  generateDailyGoalsResponse(userMessage, userProfile) {
+    const userName = userProfile.name || 'there';
+    const currentStreak = userProfile.streak?.current || 0;
+    const skills = userProfile.skills || [];
+    const goals = userProfile.careerGoals || [];
+    
+    return `# 🎯 Your Daily Goals, ${userName}!
 
-Based on your message and profile, here's a structured learning path:
+Great to see you staying focused on your career journey! Here's what I recommend for today:
+
+## **Today's Priority Actions:**
+
+### **🔥 Maintain Your Streak**
+${currentStreak > 0 
+  ? `Amazing! You're on a **${currentStreak}-day learning streak**! Let's keep it going.` 
+  : `Today is a perfect day to start a new learning streak!`}
+
+### **📚 Skill Development Focus**
+${skills.length > 0 
+  ? `Based on your current skills (${skills.slice(0, 3).map(s => s.name).join(', ')}), I suggest:`
+  : `Let's start building your skill foundation:`}
+
+- **Practice for 30 minutes** on your weakest skill
+- **Read one article** about industry trends
+- **Complete one coding challenge** or tutorial
+
+### **🎯 Goal Progress Check**
+${goals.length > 0 
+  ? `Your career goals: ${goals.slice(0, 2).map(g => g.title).join(', ')}`
+  : `Consider setting a specific career goal today!`}
+
+**Today's Action:** Take one small step toward your primary goal.
+
+## **💡 Quick Win Suggestions:**
+1. **Update your LinkedIn** with a recent accomplishment
+2. **Connect with one professional** in your target field  
+3. **Review and practice** one technical concept
+
+What specific area would you like to focus on today? I can create a detailed daily plan for you! 🚀`;
+  }
+
+  generateRoadmapResponse(userMessage, userProfile) {
+    const userName = userProfile.name || 'there';
+    const experience = userProfile.profile?.experience || 'beginner';
+    return `# 🗺️ Personalized Career Roadmap for ${userName}
+
+Based on your profile and goals, here's your structured learning path:
 
 ## **Phase 1: Foundation Building (Weeks 1-4)**
 - **Core Skills Assessment**: Evaluate your current skill level
@@ -434,12 +499,17 @@ Based on your message and profile, here's a structured learning path:
 1. **Immediate Action**: Choose one skill to focus on this week
 2. **Weekly Goals**: Set specific learning targets
 3. **Progress Tracking**: Use our dashboard to monitor advancement
+4. **Daily Practice**: Maintain your learning streak!
 
 Would you like me to create a more detailed roadmap for a specific role or technology?`;
   }
 
   generateJobSearchResponse(userMessage, userProfile) {
-    return `# 💼 Job Search Strategy
+    const userName = userProfile.name || 'there';
+    const skills = userProfile.skills || [];
+    return `# 💼 Job Search Strategy for ${userName}
+
+${skills.length > 0 ? `Great! With your skills in ${skills.slice(0, 3).map(s => s.name).join(', ')}, you're well-positioned for opportunities.` : ''}
 
 ## **Optimized Job Search Approach:**
 
@@ -472,7 +542,11 @@ Let me know your target role, and I can provide more specific guidance!`;
   }
 
   generateSkillDevelopmentResponse(userMessage, userProfile) {
-    return `# 📚 Skill Development Plan
+    const userName = userProfile.name || 'there';
+    const currentSkills = userProfile.skills?.length || 0;
+    return `# 📚 Skill Development Plan for ${userName}
+
+${currentSkills > 0 ? `You already have ${currentSkills} skills in your profile - that's a great foundation!` : `Let's start building your skill portfolio!`}
 
 ## **Strategic Learning Approach:**
 
@@ -506,7 +580,11 @@ What specific skill would you like to develop? I can provide a detailed learning
   }
 
   generateInterviewPrepResponse(userMessage, userProfile) {
-    return `# 🎯 Interview Preparation Guide
+    const userName = userProfile.name || 'there';
+    const experience = userProfile.profile?.experience || '0-1 years';
+    return `# 🎯 Interview Preparation Guide for ${userName}
+
+With your **${experience}** of experience, here's a tailored preparation strategy:
 
 ## **Comprehensive Interview Strategy:**
 
@@ -541,7 +619,8 @@ Need help with specific interview types or technical topics? Let me know!`;
   }
 
   generateSalaryResponse(userMessage, userProfile) {
-    return `# 💰 Salary Negotiation & Market Analysis
+    const userName = userProfile.name || 'there';
+    return `# 💰 Salary Negotiation & Market Analysis for ${userName}
 
 ## **Salary Research & Negotiation Strategy:**
 
@@ -578,7 +657,11 @@ Would you like specific salary data for your target role and location?`;
   }
 
   generateCareerTransitionResponse(userMessage, userProfile) {
-    return `# 🔄 Career Transition Strategy
+    const userName = userProfile.name || 'there';
+    const background = userProfile.background || 'professional';
+    return `# 🔄 Career Transition Strategy for ${userName}
+
+As a **${background}**, you have unique advantages in making this transition!
 
 ## **Strategic Career Change Approach:**
 
@@ -620,9 +703,11 @@ What specific career transition are you considering? I can provide more targeted
   }
 
   generateGeneralGuidanceResponse(userMessage, userProfile) {
-    return `# 🎯 Personalized Career Guidance
+    const userName = userProfile.name || 'there';
+    const streak = userProfile.streak?.current || 0;
+    return `# 🎯 Welcome back, ${userName}! 
 
-Hello! I'm here to help you navigate your career journey with personalized advice.
+${streak > 0 ? `🔥 Fantastic! You're on a ${streak}-day learning streak!` : `Ready to start your career journey?`}
 
 ## **How I Can Assist You:**
 
@@ -657,6 +742,7 @@ Hello! I'm here to help you navigate your career journey with personalized advic
 - "What skills do I need for a Frontend Developer role?"
 - "How do I prepare for technical interviews?"
 - "Create a learning roadmap for machine learning"
+- "What are my goals for today?"
 
 Feel free to ask me anything about your career! I'm here to provide personalized, actionable advice based on your unique situation and goals.
 

@@ -36,6 +36,7 @@ const Dashboard: React.FC = () => {
       });
       setAnalytics(analyticsResponse.data.analytics);
 
+      // Load roadmaps with better error handling
       // Load roadmaps
       const roadmapsResponse = await axios.get('/roadmaps', {
         headers: { Authorization: `Bearer ${token}` }
@@ -44,7 +45,12 @@ const Dashboard: React.FC = () => {
       if (roadmapsResponse.data.roadmaps.length > 0) {
         const latestRoadmap = roadmapsResponse.data.roadmaps[0];
         setRoadmapItems(latestRoadmap.items || []);
+      } else {
+        // If no roadmaps exist, show empty state
+        setRoadmapItems([]);
       }
+    } catch (roadmapError) {
+      console.error('Error loading roadmaps:', roadmapError);
 
       // Generate skill gaps from user skills
       if (profileResponse.data.profile.skills) {
@@ -60,6 +66,7 @@ const Dashboard: React.FC = () => {
         });
         setSkillGaps(gaps);
       }
+    }
 
     } catch (error) {
       console.error('Error loading dashboard data:', error);
@@ -183,9 +190,9 @@ const Dashboard: React.FC = () => {
                 <p className="text-gray-600 mb-4">
                   Start by chatting with our AI assistant to create your personalized career roadmap.
                 </p>
-                <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                <a href="/chat" className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                   Start Chat
-                </button>
+                </a>
               </div>
             )}
           </div>

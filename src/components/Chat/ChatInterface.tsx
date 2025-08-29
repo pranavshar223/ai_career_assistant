@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Loader2 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import { ChatMessage } from '../../types';
 
 interface ChatInterfaceProps {
@@ -56,6 +57,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSendMessage, 
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
               <p className="text-blue-800 font-medium mb-2">Try asking me:</p>
               <ul className="text-blue-700 text-sm space-y-1">
+                <li>• "What are my goals for today?"</li>
                 <li>• "I want to become a Data Scientist"</li>
                 <li>• "What skills do I need for a Frontend Developer role?"</li>
                 <li>• "Help me create a learning roadmap"</li>
@@ -79,10 +81,29 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ messages, onSendMessage, 
                 className={`px-4 py-2 rounded-lg ${
                   message.role === 'user'
                     ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-900'
+                    : 'bg-gray-100 text-gray-900 prose prose-sm max-w-none'
                 }`}
               >
-                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                {message.role === 'assistant' ? (
+                  <div className="text-sm">
+                    <ReactMarkdown
+                      components={{
+                        h1: ({children}) => <h1 className="text-lg font-bold mb-2 text-gray-900">{children}</h1>,
+                        h2: ({children}) => <h2 className="text-base font-semibold mb-2 text-gray-800">{children}</h2>,
+                        h3: ({children}) => <h3 className="text-sm font-medium mb-1 text-gray-700">{children}</h3>,
+                        p: ({children}) => <p className="mb-2 text-gray-700">{children}</p>,
+                        ul: ({children}) => <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>,
+                        li: ({children}) => <li className="text-gray-700">{children}</li>,
+                        strong: ({children}) => <strong className="font-semibold text-gray-900">{children}</strong>,
+                        code: ({children}) => <code className="bg-gray-200 px-1 py-0.5 rounded text-xs font-mono">{children}</code>
+                      }}
+                    >
+                      {message.content}
+                    </ReactMarkdown>
+                  </div>
+                ) : (
+                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                )}
               </div>
               {message.role === 'user' && (
                 <div className="flex items-center justify-center w-8 h-8 bg-gray-600 rounded-full flex-shrink-0">

@@ -39,7 +39,7 @@ const RoadmapTimeline: React.FC<RoadmapTimelineProps> = ({ items, onToggleComple
       <div className="space-y-4">
         {items.map((item, index) => (
           <div 
-            key={item.id} 
+            key={item.id || `roadmap-item-${index}`} 
             className={`relative flex items-start p-4 rounded-lg border transition-all ${
               item.completed 
                 ? 'bg-green-50 border-green-200' 
@@ -47,7 +47,7 @@ const RoadmapTimeline: React.FC<RoadmapTimelineProps> = ({ items, onToggleComple
             }`}
           >
             <button
-              onClick={() => onToggleComplete(item.id)}
+              onClick={() => onToggleComplete(item.id || `item-${index}`)}
               className="flex-shrink-0 mr-4 mt-1"
             >
               {item.completed ? (
@@ -86,6 +86,19 @@ const RoadmapTimeline: React.FC<RoadmapTimelineProps> = ({ items, onToggleComple
             </div>
           </div>
         ))}
+        
+        {items.length === 0 && (
+          <div className="text-center py-8 text-gray-500">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Star className="w-8 h-8 text-gray-400" />
+            </div>
+            <h4 className="font-medium text-gray-700 mb-2">No roadmap yet</h4>
+            <p className="text-sm mb-4">Chat with our AI to generate your personalized learning roadmap</p>
+            <a href="/chat" className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm">
+              Create Roadmap
+            </a>
+          </div>
+        )}
       </div>
     </div>
   );
