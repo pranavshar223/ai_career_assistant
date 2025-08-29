@@ -29,6 +29,7 @@ const Chat: React.FC = () => {
           timestamp: new Date(msg.timestamp),
         }));
         setMessages(formattedMessages);
+        console.log('Loaded chat history:', formattedMessages.length, 'messages');
       }
     } catch (error) {
       console.error('Error loading chat history:', error);
@@ -63,6 +64,7 @@ const Chat: React.FC = () => {
         };
 
         setMessages((prev) => [...prev, aiMessage]);
+        console.log('Received AI response:', aiMessage.content.substring(0, 100));
       }
     } catch (error: any) {
       console.error("Error sending message:", error);

@@ -71,6 +71,7 @@ router.post('/generate', auth, [
         targetRole: roadmap.targetRole,
         items: roadmap.items,
         totalEstimatedDuration: roadmap.totalEstimatedDuration,
+        itemCount: roadmap.items.length,
         difficulty: roadmap.difficulty,
         progress: roadmap.progress,
         createdAt: roadmap.createdAt
@@ -115,6 +116,7 @@ router.get('/', auth, async (req, res) => {
         difficulty: roadmap.difficulty,
         totalEstimatedDuration: roadmap.totalEstimatedDuration,
         isActive: roadmap.isActive,
+        itemCount: roadmap.items.length,
         createdAt: roadmap.createdAt,
         lastUpdated: roadmap.lastUpdated
       })),
@@ -159,6 +161,7 @@ router.get('/:id', auth, async (req, res) => {
         items: roadmap.items,
         totalEstimatedDuration: roadmap.totalEstimatedDuration,
         difficulty: roadmap.difficulty,
+        itemCount: roadmap.items.length,
         progress: roadmap.progress,
         isActive: roadmap.isActive,
         createdAt: roadmap.createdAt,
