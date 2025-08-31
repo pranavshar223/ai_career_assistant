@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect } from
 import axios from 'axios';
 import { User } from '../types';
 
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = `${window.location.protocol}//localhost:5000/api`;
 
 // Configure axios defaults
 axios.defaults.baseURL = API_BASE_URL;
