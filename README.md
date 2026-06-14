@@ -1,90 +1,70 @@
-# AI Career Assistant Platform
+<div align="center">
+  <img src="./public/arohan gb-remove.JPG" width="120" alt="Arohan Logo" style="border-radius: 16px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);" />
+  <h1>🎯 AI Career Assistant</h1>
+  <p><em>An intelligent, full-stack platform empowering students and professionals to navigate their careers — from identifying skill gaps to landing the perfect job.</em></p>
+</div>
 
-A comprehensive AI-powered platform that helps students and professionals plan their career paths, identify skill gaps, and connect with real job opportunities.
+---
 
-## 🚀 Features
+## 🚀 Overview
 
-### Frontend (React + TypeScript)
-- **User Authentication**: Secure sign up/login with JWT tokens
-- **AI Career Chat**: Interactive chat powered by Google Gemini API
-- **Personalized Dashboard**: Progress tracking, skill gap analysis, and learning streaks
-- **Job Recommendations**: Real-time job listings with match scoring
-- **Roadmap Generation**: AI-generated step-by-step career roadmaps
-- **Profile Management**: Skills tracking and career goal setting
-- **Responsive Design**: Mobile-first design with Tailwind CSS
+**AI Career Assistant** combines the advanced reasoning capabilities of Google Gemini with real-time job market data to serve as your personalized career co-pilot. Whether you need to generate tailored learning roadmaps, engage with an intelligent career advisor, track your learning progress, or discover job opportunities aligned with your profile, this platform provides a comprehensive suite of tools to accelerate your professional growth.
 
-### Backend (Node.js + Express)
-- **RESTful API**: Comprehensive API with proper error handling
-- **MongoDB Integration**: Flexible document-based data storage
-- **AI Integration**: Google Gemini API for intelligent responses
-- **Job API Integration**: RapidAPI integration for real job listings
-- **Authentication & Security**: JWT-based auth with bcrypt password hashing
-- **Rate Limiting**: API protection against abuse
-- **Data Validation**: Input validation and sanitization
+## ✨ Key Features
 
-## 🛠️ Tech Stack
+- **🤖 AI-Powered Guidance**: Consult with an intelligent career advisor powered by Google Gemini. Receive personalized advice, actionable skill recommendations, and instant answers to your career-related queries.
+- **📊 Skill Gap Analysis**: Leverage visual charts that dynamically compare your current skill set against the demands of your target roles, ensuring you focus on the areas that matter most.
+- **🗺️ Adaptive Roadmap Generation**: Let the AI construct a personalized, step-by-step learning path complete with specific skills, projects, certifications, and adaptive timelines based on your progress.
+- **💼 Intelligent Job Recommendations**: Browse real, live job listings aggregated from external APIs, intelligently scored and ranked according to how well they align with your unique profile.
+- **📈 Gamified Progress Tracking**: Stay motivated with built-in streak counters, analytics, and achievement tracking designed to foster consistent, daily learning habits.
+- **⚙️ Comprehensive Profile Management**: Seamlessly manage your skills, set precise career goals, and configure your job preferences from a unified, modern dashboard.
 
-### Frontend
-- React 18 with TypeScript
-- Tailwind CSS for styling
-- React Router for navigation
-- Recharts for data visualization
-- Axios for API calls
-- Lucide React for icons
+> For a detailed look at our upcoming features and vision, please refer to the [ROADMAP.md](./ROADMAP.md).
 
-### Backend
-- Node.js with Express.js
-- MongoDB with Mongoose ODM
-- JWT for authentication
-- bcryptjs for password hashing
-- Google Gemini API for AI responses
-- RapidAPI for job listings
-- Express Rate Limit for API protection
+## 🛠️ Technology Stack
 
-## 📦 Installation & Setup
+| Layer | Technologies |
+|---|---|
+| **Frontend** | React 18, TypeScript, Tailwind CSS, Recharts, React Router |
+| **Backend** | Node.js, Express.js, MongoDB, Mongoose |
+| **AI Integration** | Google Gemini API |
+| **External APIs** | RapidAPI (JSearch / Adzuna for Jobs) |
+| **Security & Auth** | JWT, bcryptjs, Helmet.js, Express Rate Limit, CORS |
+
+## 🏁 Getting Started
 
 ### Prerequisites
-- Node.js (v16 or higher)
-- MongoDB (local or cloud instance)
-- Google Gemini API key
-- RapidAPI key (optional, for job listings)
 
-### Frontend Setup
+Ensure you have the following installed and configured before proceeding:
+- **Node.js** (v16 or higher)
+- **MongoDB** (Local instance or MongoDB Atlas)
+- **Google Gemini API Key**
+- **RapidAPI Key** *(Optional, but highly recommended for live job listings)*
+
+### Installation & Setup
+
+**1. Clone the repository and install frontend dependencies:**
 ```bash
-# Install dependencies
 npm install
-
-# Start development server
-npm run dev
 ```
 
-### Backend Setup
+**2. Configure and install backend dependencies:**
 ```bash
-# Navigate to server directory
 cd server
-
-# Install dependencies
 npm install
-
-# Copy environment variables
-cp ../.env.example .env
-
-# Edit .env file with your configuration
-# Add your MongoDB URI, JWT secret, and API keys
-
-# Start development server
-npm run dev
+cp .env.example .env
 ```
+*Note: Be sure to populate your `.env` file with the correct credentials (see Environment Variables below).*
 
-### Full Stack Development
+**3. Launch the application:**
+To start both the frontend development server and the backend API concurrently:
 ```bash
-# Run both frontend and backend simultaneously
 npm run dev:full
 ```
 
-## 🔧 Environment Variables
+### Environment Variables
 
-Create a `.env` file in the server directory:
+Create a `.env` file in the `server/` directory using the following template:
 
 ```env
 # Server Configuration
@@ -92,120 +72,164 @@ NODE_ENV=development
 PORT=5000
 FRONTEND_URL=http://localhost:5173
 
-# Database
-MONGODB_URI=mongodb://localhost:27017/ai-career-assistant
+# Database configuration
+MONGO_URI=mongodb://localhost:27017/ai-career-assistant
 
-# JWT Configuration
-JWT_SECRET=your-super-secret-jwt-key-here
+# Authentication
+JWT_SECRET=your_secure_jwt_secret
 JWT_EXPIRES_IN=7d
 
-# Google Gemini API
-GEMINI_API_KEY=your-gemini-api-key-here
-
-# RapidAPI Configuration
-RAPIDAPI_KEY=your-rapidapi-key-here
-ADZUNA_APP_ID=your-adzuna-app-id
-ADZUNA_API_KEY=your-adzuna-api-key
+# External APIs
+GEMINI_API_KEY=your_google_gemini_api_key
+RAPIDAPI_KEY=your_rapidapi_key
 ```
 
-## 📚 API Documentation
+## 🗄️ Database Schema
 
-### Authentication Endpoints
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - User login
-- `GET /api/auth/me` - Get current user
-- `POST /api/auth/refresh` - Refresh JWT token
+The backend utilizes MongoDB and Mongoose to model complex relationships efficiently. Below is a high-level representation of the core data models and their interactions.
 
-### User Management
-- `GET /api/users/profile` - Get user profile
-- `PUT /api/users/profile` - Update profile
-- `POST /api/users/skills` - Add skill
-- `PUT /api/users/skills/:id` - Update skill
-- `DELETE /api/users/skills/:id` - Remove skill
+```mermaid
+erDiagram
+    USER ||--o{ ROADMAP : generates
+    USER ||--o{ CHAT_SESSION : has
+    USER ||--o{ SAVED_JOB : tracks
+    ROADMAP ||--o{ ROADMAP_ITEM : contains
+    CHAT_SESSION ||--o{ CHAT_MESSAGE : includes
 
-### AI Chat
-- `POST /api/chat/message` - Send message to AI
-- `GET /api/chat/history/:sessionId` - Get chat history
-- `GET /api/chat/sessions` - Get all chat sessions
+    USER {
+        ObjectId _id
+        String name
+        String email
+        String password
+        String background
+        Array skills
+        Array careerGoals
+        Object preferences
+        Object streak
+    }
 
-### Roadmaps
-- `POST /api/roadmaps/generate` - Generate AI roadmap
-- `GET /api/roadmaps` - Get user roadmaps
-- `GET /api/roadmaps/:id` - Get specific roadmap
-- `PUT /api/roadmaps/:id/items/:itemId/toggle` - Toggle item completion
+    ROADMAP {
+        ObjectId _id
+        ObjectId userId
+        String title
+        String careerGoal
+        String targetRole
+        Array items
+        Object progress
+    }
 
-### Job Search
-- `GET /api/jobs/search` - Search jobs
-- `GET /api/jobs/recommendations` - Get personalized recommendations
-- `POST /api/jobs/save` - Save job
-- `GET /api/jobs/saved` - Get saved jobs
+    ROADMAP_ITEM {
+        ObjectId _id
+        String title
+        String type
+        String phase
+        String status
+        Date dueDate
+        Array resources
+    }
 
-## 🎯 Key Features Explained
+    CHAT_SESSION {
+        ObjectId _id
+        ObjectId userId
+        String title
+        Date lastInteraction
+    }
 
-### AI-Powered Career Guidance
-The platform uses Google Gemini API to provide intelligent career advice, skill recommendations, and personalized roadmaps based on user goals and current skills.
-
-### Skill Gap Analysis
-Visual charts show users their current skill levels versus required skills for their target roles, helping them focus their learning efforts.
-
-### Learning Streak Tracking
-Gamified progress tracking encourages daily learning habits with streak counters and achievement systems.
-
-### Job Matching Algorithm
-Advanced matching algorithm scores job listings based on user skills, preferences, and career goals to surface the most relevant opportunities.
-
-### Personalized Roadmaps
-AI generates step-by-step learning paths with specific skills, projects, certifications, and timelines tailored to each user's goals.
-
-## 🔒 Security Features
-
-- JWT-based authentication with secure token handling
-- Password hashing with bcrypt (12 rounds)
-- Rate limiting to prevent API abuse
-- Input validation and sanitization
-- CORS configuration for secure cross-origin requests
-- Helmet.js for security headers
-
-## 📱 Responsive Design
-
-The platform is fully responsive with:
-- Mobile-first design approach
-- Breakpoints for tablet (768px) and desktop (1024px+)
-- Touch-friendly interface elements
-- Optimized layouts for all screen sizes
-
-## 🚀 Deployment
-
-### Frontend Deployment
-The frontend can be deployed to any static hosting service:
-```bash
-npm run build
-# Deploy the 'dist' folder to your hosting service
+    CHAT_MESSAGE {
+        ObjectId _id
+        ObjectId sessionId
+        String role
+        String content
+        Date timestamp
+    }
 ```
 
-### Backend Deployment
-The backend can be deployed to services like Heroku, Railway, or DigitalOcean:
-```bash
-# Set environment variables on your hosting platform
-# Deploy the server directory
-```
+## 📡 API Reference
+
+Below is a comprehensive list of the available REST API endpoints.
+
+### Authentication (`/api/auth`)
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/register` | Register a new user account |
+| `POST` | `/login` | Authenticate and retrieve a JWT |
+| `GET` | `/me` | Retrieve the authenticated user's profile |
+| `GET` | `/verify` | Verify the current JWT validity |
+| `POST` | `/refresh` | Refresh an expiring JWT |
+
+### User Management (`/api/users`)
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/profile` | Get the user's profile information |
+| `PUT` | `/profile` | Update the user's profile |
+| `POST` | `/skills` | Add a new skill to the user's profile |
+| `PUT` | `/skills/:skillId` | Update an existing skill |
+| `DELETE` | `/skills/:skillId` | Remove a skill |
+| `POST` | `/goals` | Add a new career goal |
+| `PUT` | `/goals/:goalId` | Update a career goal |
+| `DELETE` | `/goals/:goalId` | Delete a career goal |
+| `PUT` | `/preferences` | Update job/learning preferences |
+| `GET` | `/stats` | Retrieve aggregated user statistics |
+
+### Skills Intelligence (`/api/skills`)
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/suggestions` | Get AI-driven skill suggestions |
+| `GET` | `/categories` | Retrieve predefined skill categories |
+| `GET` | `/trending` | View current trending skills |
+
+### Roadmaps (`/api/roadmaps`)
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/generate` | Generate a new AI-driven learning roadmap |
+| `GET` | `/` | List all roadmaps belonging to the user |
+| `GET` | `/:id` | Retrieve a specific roadmap |
+| `PUT` | `/:id` | Update roadmap metadata (e.g., title, description) |
+| `DELETE` | `/:id` | Delete a specific roadmap |
+| `POST` | `/:id/adapt` | Adapt a roadmap based on missed or early completions |
+| `PUT` | `/:id/items/:itemId/toggle` | Toggle the completion status of a roadmap item |
+
+### Jobs (`/api/jobs`)
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/search` | Search for job listings via external APIs |
+| `GET` | `/recommendations` | Get personalized job recommendations |
+| `POST` | `/save` | Save a job listing to the user's profile |
+| `GET` | `/saved` | Retrieve all saved jobs |
+| `DELETE` | `/saved/:jobId` | Remove a job from saved listings |
+
+### AI Chat (`/api/chat`)
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/message` | Send a message to the AI career advisor |
+| `GET` | `/sessions` | List all historical chat sessions |
+| `GET` | `/history/:sessionId` | Retrieve the message history for a specific session |
+| `PUT` | `/sessions/:sessionId` | Update the metadata of a chat session |
+
+### Analytics (`/api/analytics`)
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/dashboard` | Retrieve high-level dashboard analytics |
+| `GET` | `/skills` | Get detailed analytics on user skills |
+| `POST` | `/feedback` | Submit application feedback or issues |
+
+## 🔒 Security Practices
+
+- **Robust Authentication**: JWT-based authentication with secure, standardized token handling.
+- **Data Protection**: All passwords are cryptographically hashed using `bcrypt` (12 rounds).
+- **Abuse Prevention**: Strict rate limiting implemented across all public and authenticated API routes.
+- **Data Integrity**: Comprehensive input validation and sanitization on all endpoints.
+- **Transport Security**: CORS restrictions and secure HTTP headers enforced via `Helmet.js`.
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+We welcome contributions! To get started:
+1. Fork the repository.
+2. Create a feature branch: `git checkout -b feature/your-feature-name`
+3. Commit your changes: `git commit -m 'feat: add exciting new feature'`
+4. Push to the branch: `git push origin feature/your-feature-name`
+5. Open a Pull Request for review.
 
-## 📄 License
+## 🏆 Acknowledgments
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🙏 Acknowledgments
-
-- Google Gemini API for AI capabilities
-- RapidAPI for job listing integrations
-- Recharts for beautiful data visualizations
-- Tailwind CSS for rapid UI development
-- The open-source community for amazing tools and libraries
+Built with cutting-edge technologies including [Google Gemini](https://deepmind.google/technologies/gemini/), [RapidAPI](https://rapidapi.com/), [Recharts](https://recharts.org/), and [Tailwind CSS](https://tailwindcss.com/).

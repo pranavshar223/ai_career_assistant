@@ -1,93 +1,69 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const morgan = require('morgan');
-const compression = require('compression');
 const rateLimit = require('express-rate-limit');
-require('dotenv').config();
-
 const connectDB = require('./config/database');
-const authRoutes = require('./routes/auth');
-const userRoutes = require('./routes/users');
-const chatRoutes = require('./routes/chat');
-const roadmapRoutes = require('./routes/roadmaps');
-const jobRoutes = require('./routes/jobs');
-const skillRoutes = require('./routes/skills');
-const analyticsRoutes = require('./routes/analytics');
 const errorHandler = require('./middleware/errorHandler');
-const geminiService = require('./services/geminiService');
+
+// This is the crucial change
+if (process.env.NODE_ENV !== 'production') {
+  require('dotenv').config();
+}
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Connect to MongoDB
+// Connect to database
 connectDB();
 
-// Security middleware
-app.use(helmet());
-app.use(compression());
+// --- START: CORS Configuration ---
+const whitelist = [
+  'http://localhost:5173',
+  'https://ai-career-assistant-v2.web.app',
+  'https://ai-career-assistant-v2.firebaseapp.com/',
+];
 
-// Rate limiting
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin || whitelist.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  }
+};
+app.use(cors(corsOptions));
+// --- END: CORS Configuration ---
+
+app.use(express.json());
+
+// --- START: Security Middleware ---
+app.use(helmet());
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.'
+  message: 'Too many requests from this IP, please try again after 15 minutes'
 });
-app.use('/api/', limiter);
+app.use('/api', limiter);
+// --- END: Security Middleware ---
 
-// CORS configuration
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-  credentials: true
-}));
-
-// Body parsing middleware
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Logging
-app.use(morgan('combined'));
-
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({ 
-    status: 'OK', 
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime()
-  });
+// Basic route
+app.get('/', (req, res) => {
+  res.json({ message: 'AI Career Assistant API Server' });
 });
 
-// API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/chat', chatRoutes);
-app.use('/api/roadmaps', roadmapRoutes);
-app.use('/api/jobs', jobRoutes);
-app.use('/api/skills', skillRoutes);
-app.use('/api/analytics', analyticsRoutes);
-
-app.post('/api/ask', async (req, res) => {
-  const { prompt, context } = req.body;
-  try {
-    const result = await geminiService.generateResponse(prompt, context);
-    res.json({ reply: result.content });
-  } catch (error) {
-    console.error('Gemini error:', error);
-    res.status(500).json({ reply: "Sorry, AI service is unavailable." });
-  }
-});
+// Routes
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/users', require('./routes/users'));
+app.use('/api/chat', require('./routes/chat'));
+app.use('/api/jobs', require('./routes/jobs'));
+app.use('/api/roadmaps', require('./routes/roadmaps'));
+app.use('/api/skills', require('./routes/skills'));
+app.use('/api/analytics', require('./routes/analytics'));
 
 // Error handling middleware
 app.use(errorHandler);
 
-// 404 handler
-app.use('*', (req, res) => {
-  res.status(404).json({ message: 'Route not found' });
-});
-
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`Server running on port ${PORT}`);
 });
-
-module.exports = app;

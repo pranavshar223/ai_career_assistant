@@ -1,0 +1,255 @@
+import React, { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import {
+  LayoutDashboard,
+  MessageSquare,
+  Briefcase,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  SlidersHorizontal,
+  MapPin,
+  Search,
+  Pencil,
+  Check,
+  X,
+  ListTodo,
+  BookOpen
+} from 'lucide-react';
+
+interface SidebarProps {
+  // Chat history sessions passed from Chat page (optional)
+  chatSessions?: { id: string; title: string; date: string }[];
+  onRenameSession?: (id: string, newTitle: string) => void;
+  // Job filter state passed from Jobs page (optional)
+  jobFilters?: {
+    searchQuery: string;
+    location: string;
+    onSearchChange: (v: string) => void;
+    onLocationChange: (v: string) => void;
+    onSearch: () => void;
+  };
+}
+
+const Sidebar: React.FC<SidebarProps> = ({ chatSessions, jobFilters, onRenameSession }) => {
+  const location = useLocation();
+  const [collapsed, setCollapsed] = useState(false);
+  
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState('');
+
+  const handleEditClick = (e: React.MouseEvent, session: { id: string; title: string }) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setEditingSessionId(session.id);
+    setEditingTitle(session.title);
+  };
+
+  const handleSaveRename = (e?: React.MouseEvent | React.KeyboardEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (editingSessionId && editingTitle.trim() && onRenameSession) {
+      onRenameSession(editingSessionId, editingTitle.trim());
+    }
+    setEditingSessionId(null);
+  };
+
+  const handleCancelRename = (e: React.MouseEvent | React.KeyboardEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setEditingSessionId(null);
+  };
+
+  const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(`${path}/`);
+
+  const navItems = [
+    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+    { name: 'Chat', href: '/chat', icon: MessageSquare },
+    { name: 'Jobs', href: '/jobs', icon: Briefcase },
+    { name: 'Tasks', href: '/tasks', icon: ListTodo },
+    { name: 'Resources', href: '/resources', icon: BookOpen },
+  ];
+
+  const isChat = location.pathname.startsWith('/chat');
+  const isJobs = location.pathname === '/jobs';
+
+  return (
+    <aside
+      className={`
+        relative flex flex-col h-full bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700
+        transition-all duration-300 ease-in-out flex-shrink-0
+        ${collapsed ? 'w-16' : 'w-64'}
+      `}
+    >
+      {/* Collapse Toggle */}
+      <button
+        onClick={() => setCollapsed(!collapsed)}
+        className="absolute -right-3 top-4 z-10 flex items-center justify-center w-6 h-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-full shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+      >
+        {collapsed ? (
+          <ChevronRight className="w-3 h-3 text-gray-500 dark:text-gray-400" />
+        ) : (
+          <ChevronLeft className="w-3 h-3 text-gray-500 dark:text-gray-400" />
+        )}
+      </button>
+
+      {/* Main Navigation */}
+      <nav className="flex-1 overflow-y-auto py-4">
+        <div className={`px-3 mb-2 ${collapsed ? 'hidden' : 'block'}`}>
+          <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider px-2">
+            Navigation
+          </p>
+        </div>
+
+        <ul className="space-y-1 px-2">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const active = isActive(item.href);
+            return (
+              <li key={item.name}>
+                <Link
+                  to={item.href}
+                  title={collapsed ? item.name : undefined}
+                  className={`
+                    flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150
+                    ${collapsed ? 'justify-center' : 'space-x-3'}
+                    ${active
+                      ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100'
+                    }
+                  `}
+                >
+                  <Icon className={`w-5 h-5 flex-shrink-0 ${active ? 'text-blue-600 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'}`} />
+                  {!collapsed && <span>{item.name}</span>}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+
+        {/* ── Chat History Section ── */}
+        {isChat && !collapsed && (
+          <div className="mt-6 px-3">
+            <div className="flex items-center space-x-2 px-2 mb-3">
+              <Clock className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+              <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                Chat History
+              </p>
+            </div>
+            <ul className="space-y-1">
+              {chatSessions && chatSessions.length > 0 ? (
+                chatSessions.map((session) => (
+                  <li key={session.id} className="relative group">
+                    {editingSessionId === session.id ? (
+                      <div className="flex items-center space-x-1 px-2 py-1.5 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                        <input
+                          type="text"
+                          value={editingTitle}
+                          onChange={(e) => setEditingTitle(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleSaveRename(e);
+                            if (e.key === 'Escape') handleCancelRename(e);
+                          }}
+                          className="flex-1 min-w-0 bg-white dark:bg-gray-700 border border-blue-300 dark:border-blue-600 rounded px-2 py-1 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:border-blue-500"
+                          autoFocus
+                        />
+                        <button onClick={handleSaveRename} className="p-1 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded">
+                          <Check className="w-4 h-4" />
+                        </button>
+                        <button onClick={handleCancelRename} className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded">
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <Link
+                        to={`/chat/${session.id}`}
+                        className="block w-full text-left px-3 py-2 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 transition-colors pr-8"
+                      >
+                        <p className="truncate font-medium">{session.title}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{session.date}</p>
+                      </Link>
+                    )}
+                    {editingSessionId !== session.id && (
+                      <button
+                        onClick={(e) => handleEditClick(e, session)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Rename chat"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </li>
+                ))
+              ) : (
+                <li className="px-3 py-2 text-sm text-gray-400 dark:text-gray-500 italic">
+                  No previous sessions
+                </li>
+              )}
+            </ul>
+          </div>
+        )}
+
+        {/* ── Job Filters Section ── */}
+        {isJobs && !collapsed && jobFilters && (
+          <div className="mt-6 px-3">
+            <div className="flex items-center space-x-2 px-2 mb-3">
+              <SlidersHorizontal className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+              <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                Job Filters
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              {/* Search */}
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 px-1">
+                  Job / Company
+                </label>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
+                  <input
+                    type="text"
+                    placeholder="Search..."
+                    value={jobFilters.searchQuery}
+                    onChange={(e) => jobFilters.onSearchChange(e.target.value)}
+                    className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Location */}
+              <div>
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 px-1">
+                  Location
+                </label>
+                <div className="relative">
+                  <MapPin className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
+                  <input
+                    type="text"
+                    placeholder="City, remote..."
+                    value={jobFilters.location}
+                    onChange={(e) => jobFilters.onLocationChange(e.target.value)}
+                    className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Search Button */}
+              <button
+                onClick={jobFilters.onSearch}
+                className="w-full flex items-center justify-center space-x-2 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <Search className="w-3.5 h-3.5" />
+                <span>Search Jobs</span>
+              </button>
+            </div>
+          </div>
+        )}
+      </nav>
+    </aside>
+  );
+};
+
+export default Sidebar;
